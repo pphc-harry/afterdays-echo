@@ -303,7 +303,7 @@ function renderUnlockedDetail(capsule) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function sendChatMessage() {
+async function sendChatMessage() {
   const capsule = getSelectedCapsule();
   const text = chatInput.value.trim();
 
@@ -317,10 +317,54 @@ function sendChatMessage() {
   }
 
   capsule.chat.push({ role: "user", text });
-  capsule.chat.push({ role: "past", text: createPastMeReply(capsule, text) });
   chatInput.value = "";
+  chatInput.disabled = true;
+  capsule.chat.push({ role: "past", text: "我正在從那一天的文字裡找回自己的語氣..." });
   saveCapsules();
   render();
+
+  const pendingIndex = capsule.chat.length - 1;
+
+  try {
+    capsule.chat[pendingIndex].text = await requestPastMeReply(capsule, text);
+  } catch {
+    capsule.chat[pendingIndex].text = createPastMeReply(capsule, text);
+    showToast("AI backend 未連線，暫用本地回聲");
+  } finally {
+    chatInput.disabled = false;
+    saveCapsules();
+    render();
+    chatInput.focus();
+  }
+}
+
+async function requestPastMeReply(capsule, userText) {
+  const response = await fetch("./api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      capsule: {
+        title: capsule.title,
+        createdAt: capsule.createdAt,
+        unlocksAt: capsule.unlocksAt,
+        days: capsule.days,
+        mood: capsule.mood,
+        toneHint: capsule.toneHint,
+        message: capsule.message,
+      },
+      userText,
+      chatHistory: capsule.chat.filter((item) => item.text && !item.text.includes("正在從那一天")),
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.text) {
+    throw new Error(data.error || "AI request failed");
+  }
+
+  return data.text;
 }
 
 function createPastMeReply(capsule, userText) {
