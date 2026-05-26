@@ -1,4 +1,5 @@
-const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 export default async function handler(request, response) {
   if (request.method !== "POST") {
@@ -6,8 +7,8 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return response.status(500).json({ error: "OPENAI_API_KEY is not configured" });
+  if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY) {
+    return response.status(500).json({ error: "No AI API key is configured" });
   }
 
   try {
@@ -20,31 +21,67 @@ export default async function handler(request, response) {
       return response.status(400).json({ error: "Missing capsule or userText" });
     }
 
-    const apiResponse = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        instructions: buildInstructions(capsule),
-        input: buildInput(capsule, userText, chatHistory),
-        max_output_tokens: 360,
-      }),
-    });
+    const text = process.env.GEMINI_API_KEY
+      ? await callGemini(capsule, userText, chatHistory)
+      : await callOpenAI(capsule, userText, chatHistory);
 
-    const data = await apiResponse.json();
-    if (!apiResponse.ok) {
-      return response.status(apiResponse.status).json({
-        error: data.error?.message || "OpenAI request failed",
-      });
-    }
-
-    return response.status(200).json({ text: extractText(data) });
+    return response.status(200).json({ text });
   } catch (error) {
     return response.status(500).json({ error: error.message || "Unexpected server error" });
   }
+}
+
+async function callGemini(capsule, userText, chatHistory) {
+  const apiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": process.env.GEMINI_API_KEY,
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: buildInstructions(capsule) }],
+      },
+      contents: [{
+        role: "user",
+        parts: [{ text: buildInput(capsule, userText, chatHistory) }],
+      }],
+      generationConfig: {
+        maxOutputTokens: 360,
+        temperature: 0.7,
+      },
+    }),
+  });
+
+  const data = await apiResponse.json();
+  if (!apiResponse.ok) {
+    throw new Error(data.error?.message || "Gemini request failed");
+  }
+
+  return extractGeminiText(data);
+}
+
+async function callOpenAI(capsule, userText, chatHistory) {
+  const apiResponse = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      instructions: buildInstructions(capsule),
+      input: buildInput(capsule, userText, chatHistory),
+      max_output_tokens: 360,
+    }),
+  });
+
+  const data = await apiResponse.json();
+  if (!apiResponse.ok) {
+    throw new Error(data.error?.message || "OpenAI request failed");
+  }
+
+  return extractOpenAIText(data);
 }
 
 function sanitizeCapsule(capsule = {}) {
@@ -86,7 +123,13 @@ function buildInput(capsule, userText, chatHistory) {
   ].join("\n\n");
 }
 
-function extractText(data) {
+function extractGeminiText(data) {
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const text = parts.map((part) => part.text || "").join("\n").trim();
+  return text || "我在這裡，但剛才那句回聲沒有完整傳回來。你可以再問我一次。";
+}
+
+function extractOpenAIText(data) {
   if (data.output_text) {
     return data.output_text.trim();
   }
