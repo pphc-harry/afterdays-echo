@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050909" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="後日回聲" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>後日回聲</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="icon" href="./icons/icon-192.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="phone-frame" aria-label="後日回聲 app prototype">
+        <header class="app-header">
+          <button class="icon-button" type="button" data-view-target="today" title="回到 Today" aria-label="回到 Today">
+            <span aria-hidden="true">‹</span>
+          </button>
+          <div>
+            <p class="kicker">Speaking to Echo</p>
+            <h1>後日回聲</h1>
+          </div>
+          <button id="resetDemoButton" class="icon-button" type="button" title="重置示範資料" aria-label="重置示範資料">
+            <span aria-hidden="true">C</span>
+          </button>
+        </header>
+
+        <nav class="tabs" aria-label="主要頁面">
+          <button class="tab active" type="button" data-view="today">Today</button>
+          <button class="tab" type="button" data-view="create">Create</button>
+          <button class="tab" type="button" data-view="timeline">Timeline</button>
+        </nav>
+
+        <section id="todayView" class="view active" aria-labelledby="todayTitle">
+          <div class="hero-panel">
+            <div class="echo-bot" aria-hidden="true">
+              <span class="bot-antenna"></span>
+              <span class="bot-head">
+                <i></i>
+                <i></i>
+              </span>
+              <span class="bot-body"></span>
+            </div>
+            <p class="kicker">寫給未來</p>
+            <h2 id="todayTitle">Meet Echo!<br />Your AI 時間膠囊</h2>
+            <p class="soft-copy">到期前只看得見倒數。到期後，過去的你會用當時留下的文字回應你。</p>
+            <div class="voice-controls">
+              <span>↙</span>
+              <button class="primary-action" type="button" data-view-target="create">封存這一刻</button>
+              <span>×</span>
+            </div>
+          </div>
+
+          <div class="section-heading">
+            <h3>等待中的回聲</h3>
+            <span id="capsuleCount">0</span>
+          </div>
+          <div id="capsuleList" class="capsule-list"></div>
+        </section>
+
+        <section id="createView" class="view" aria-labelledby="createTitle">
+          <form id="capsuleForm" class="create-form">
+            <div class="form-head">
+              <p class="kicker">Create Capsule</p>
+              <h2 id="createTitle">寫給 <span id="selectedDaysLabel">30</span> days 後的我</h2>
+            </div>
+
+            <label class="field">
+              <span>標題</span>
+              <input id="titleInput" type="text" maxlength="42" placeholder="例如：如果那天還是很累" required />
+            </label>
+
+            <div class="field">
+              <span>封存多久</span>
+              <div class="day-options" role="radiogroup" aria-label="選擇天數">
+                <button class="day-chip" type="button" data-days="7">7</button>
+                <button class="day-chip active" type="button" data-days="30">30</button>
+                <button class="day-chip" type="button" data-days="100">100</button>
+                <button class="day-chip" type="button" data-days="365">365</button>
+              </div>
+              <label class="custom-days">
+                <span>自訂</span>
+                <input id="customDaysInput" type="number" min="1" max="3650" inputmode="numeric" placeholder="XX" />
+                <span>days</span>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>現在的心情</span>
+              <select id="moodInput">
+                <option value="平靜">平靜</option>
+                <option value="疲憊">疲憊</option>
+                <option value="期待">期待</option>
+                <option value="混亂">混亂</option>
+                <option value="勇敢">勇敢</option>
+                <option value="想念">想念</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>留言</span>
+              <textarea id="messageInput" rows="8" maxlength="1200" placeholder="把今天的語氣、問題、願望都留在這裡。" required></textarea>
+              <small id="messageMeta">0 / 1200</small>
+            </label>
+
+            <label class="field">
+              <span>給 AI 的語氣線索</span>
+              <input id="promptInput" type="text" maxlength="120" placeholder="例如：像今天凌晨三點的我，誠實一點，但不要太用力。" />
+            </label>
+
+            <div class="attachment-row" aria-label="附件選項">
+              <button class="ghost-action" type="button" data-attachment="voice">＋ 語音備忘</button>
+              <button class="ghost-action" type="button" data-attachment="photo">＋ 此刻照片</button>
+            </div>
+
+            <button class="primary-action seal-action" type="submit">封存這一刻</button>
+          </form>
+        </section>
+
+        <section id="timelineView" class="view" aria-labelledby="timelineTitle">
+          <div class="section-heading">
+            <div>
+              <p class="kicker">Timeline</p>
+              <h2 id="timelineTitle">過去留言 → 到期對話 → 現在回應</h2>
+            </div>
+          </div>
+          <div id="timelineList" class="timeline-list"></div>
+        </section>
+      </section>
+
+      <aside class="detail-panel" aria-live="polite">
+        <div id="emptyDetail" class="detail-empty">
+          <div class="mini-orbit" aria-hidden="true"></div>
+          <p class="kicker">Private by default</p>
+          <h2>選一個膠囊，打開和過去的連線。</h2>
+          <p>這個原型使用瀏覽器本地儲存。AI 回覆是基於單一留言的模擬，不會建立長期人格檔案。</p>
+        </div>
+
+        <article id="detailCard" class="detail-card hidden">
+          <div class="detail-topline">
+            <button class="icon-button" type="button" data-view-target="today" title="返回" aria-label="返回">
+              <span aria-hidden="true">‹</span>
+            </button>
+            <span class="detail-title">Echo Information</span>
+            <button class="icon-button" type="button" title="重新整理" aria-label="重新整理">
+              <span aria-hidden="true">C</span>
+            </button>
+            <button id="deleteCapsuleButton" class="danger-action" type="button">刪除</button>
+          </div>
+          <span id="detailStatus" class="status-pill detail-status">Sealed</span>
+
+          <div id="sealedState" class="sealed-state hidden">
+            <p class="kicker">Sealed Capsule</p>
+            <h2 id="sealedTitle"></h2>
+            <p id="sealedDates" class="soft-copy"></p>
+            <div class="countdown-orbit">
+              <strong id="sealedCountdown"></strong>
+              <span>days left</span>
+            </div>
+            <p class="privacy-note">到期前正文保持封存，只顯示標題、日期與倒數。</p>
+          </div>
+
+          <div id="unlockState" class="unlock-state hidden">
+            <div class="unlock-ribbon">基於 <span id="sourceAgeLabel"></span> days 前的留言生成</div>
+            <p class="kicker">Unlocked Message</p>
+            <h2 id="unlockTitle"></h2>
+            <p id="unlockMeta" class="soft-copy"></p>
+            <blockquote id="unlockMessage"></blockquote>
+            <div id="attachmentBadges" class="attachment-badges"></div>
+
+            <section class="chat-box" aria-label="和過去的我聊聊">
+              <div id="chatMessages" class="chat-messages"></div>
+              <form id="chatForm" class="chat-form">
+                <input id="chatInput" type="text" maxlength="180" placeholder="問過去的我一句話" />
+                <button type="submit">送出</button>
+              </form>
+            </section>
+
+            <label class="field reply-field">
+              <span>現在的我回應過去的我</span>
+              <textarea id="replyInput" rows="4" maxlength="600" placeholder="寫下你現在想回給那天自己的話。"></textarea>
+            </label>
+            <button id="saveReplyButton" class="primary-action" type="button">保存回應</button>
+          </div>
+        </article>
+      </aside>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
