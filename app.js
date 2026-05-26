@@ -5,6 +5,7 @@ const state = {
   capsules: loadCapsules(),
   selectedId: null,
   selectedDays: 30,
+  detailOpen: false,
 };
 
 const views = {
@@ -64,7 +65,11 @@ function bindEvents() {
   });
 
   document.querySelectorAll("[data-view-target]").forEach((button) => {
-    button.addEventListener("click", () => switchView(button.dataset.viewTarget));
+    button.addEventListener("click", () => {
+      state.detailOpen = false;
+      switchView(button.dataset.viewTarget);
+      render();
+    });
   });
 
   dayChips.forEach((chip) => {
@@ -206,6 +211,7 @@ function renderCapsuleList() {
   capsuleList.querySelectorAll(".capsule-card").forEach((card) => {
     card.addEventListener("click", () => {
       state.selectedId = card.dataset.id;
+      state.detailOpen = true;
       render();
     });
   });
@@ -240,6 +246,7 @@ function renderTimeline() {
 
 function renderDetail() {
   const capsule = getSelectedCapsule();
+  document.body.classList.toggle("detail-open", Boolean(capsule && state.detailOpen));
   emptyDetail.classList.toggle("hidden", Boolean(capsule));
   detailCard.classList.toggle("hidden", !capsule);
 

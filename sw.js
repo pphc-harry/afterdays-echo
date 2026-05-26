@@ -1,4 +1,4 @@
-const CACHE_NAME = "afterdays-echo-pwa-v1";
+const CACHE_NAME = "afterdays-echo-pwa-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
